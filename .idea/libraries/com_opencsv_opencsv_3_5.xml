@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="com.opencsv:opencsv:3.5" type="repository">
+    <properties maven-id="com.opencsv:opencsv:3.5" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/opencsv-3.5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-lang3-3.3.2.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/opencsv-3.5-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
