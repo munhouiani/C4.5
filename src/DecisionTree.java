@@ -68,7 +68,7 @@ public class DecisionTree {
             column = new Column(attribute);
             testset.addColumn(column);
 
-            attributeList.add(attribute);
+            //attributeList.add(attribute);
 
 
             // splitItem[6]: state_province
@@ -79,7 +79,7 @@ public class DecisionTree {
             column = new Column(attribute);
             testset.addColumn(column);
 
-            attributeList.add(attribute);
+            //attributeList.add(attribute);
 
             // splitItem[7]: postal_code
 
