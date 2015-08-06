@@ -26,6 +26,10 @@ public class Column {
         }
     }
 
+    public Column() {
+        this("");
+    }
+
     public int getRowSize() {
         return row.size();
     }

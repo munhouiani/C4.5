@@ -16,6 +16,7 @@ public class Dataset {
     }
 
     public Dataset(Dataset dataset) { // copy constructor
+        this.columns = new ArrayList<>();
         for(int i = 0; i < dataset.columns.size(); i++) {
             Column localColumn = new Column(dataset.columns.get(i));
             this.columns.add(localColumn);
@@ -42,6 +43,18 @@ public class Dataset {
 
     public int getRowSize() {
         return columns.get(0).getRowSize();
+    }
+
+    public Dataset cloneDatasetWithColumns () {
+        Dataset dataset = new Dataset();
+        for(int i = 0; i < this.getColumnSize(); i++) {
+            Column column = new Column();
+            Column shadowColumn = this.columns.get(i);
+            column.type = shadowColumn.type;
+            column.attribute = shadowColumn.attribute;
+            dataset.columns.add(column);
+        }
+        return dataset;
     }
 
 }

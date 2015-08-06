@@ -1,11 +1,9 @@
 import com.opencsv.CSVReader;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Random;
-import java.util.Scanner;
+import java.util.*;
 
 /**
  * Created by mhwong on 8/5/15.
@@ -31,7 +29,7 @@ public class DecisionTree {
         dataset = null;
 
         // generate decision tree
-        generate_decision_tree(trainset, attributeList);
+        Node decisionTree = generate_decision_tree(trainset, attributeList);
     }
 
     public DecisionTree() {
@@ -160,7 +158,7 @@ public class DecisionTree {
             attributeList.add(attribute);
 
 
-            // splitItem[16]: member_card
+            // splitItem[16]: member_card, our targer, not included in attribute_list
             attribute = splitItem[16].replace("\"", "");
             column = new Column(attribute);
             dataset.addColumn(column);
@@ -168,7 +166,6 @@ public class DecisionTree {
             column = new Column(attribute);
             testset.addColumn(column);
 
-            attributeList.add(attribute);
 
 
             // splitItem[17]: age
@@ -363,73 +360,269 @@ public class DecisionTree {
         }
 
         // apply attribute selection method
-        String best_attribute = informationGain(dataset, attributeList);
+        ArrayList<Dataset> subDatasetList = new ArrayList<>();
+        String best_attribute = measure_with_information_gain(dataset, attributeList, subDatasetList);
+        String[] token = best_attribute.split(" ");
+        if(!best_attribute.isEmpty()) {
+            attributeList.remove(token[1]);
+            if(token[0].equals("Integer")) {
+                node.attribute = token[1];
+                node.pathName = token[2];
+                for(Dataset subDataset: subDatasetList) {
+                    node.child.add(generate_decision_tree(subDataset, attributeList));
+                }
+            }
+            else {
+                node.attribute = token[1];
+                for(Dataset subDataset: subDatasetList) {
+                    node.pathName = subDataset.getColumn(token[1]).getRowValue(0);
+                    node.child.add(generate_decision_tree(subDataset, attributeList));
+                }
+            }
+        }
+
+
         return node;
 
     }
 
-    private String informationGain(Dataset dataset, ArrayList<String> attributeList) {
-        // first count current dataset information
-        double currentInformation = 0.0;
-        HashMap<String, Integer> targetFrequencyTable = dataset.getColumn("member_card").getFrequencyTable();
-        double totaldata = dataset.getRowSize();
-        for(String item: targetFrequencyTable.keySet()) {
-            currentInformation -= (targetFrequencyTable.get(item)) / (totaldata) * (Math.log((targetFrequencyTable.get(item)) / (totaldata)) / Math.log(2.0d));
-        }
+    private String measure_with_information_gain(Dataset dataset, ArrayList<String> attributeList, ArrayList<Dataset> subDatasetList) {
 
-        double gain = 0.0;
+        String target= "member_card";
         String bestAttribute = "";
+        double currentGain = 0.0;
+        // count the information gain of original data
+        double currentInformation = count_information_gain_of_dataset(dataset, target);
+
+        // split data by every attribute in attribute list and count entropy
+
         for(String attribute: attributeList) {
-
-            Column attributeColumn = dataset.getColumn(attribute);
-            HashMap<String, Integer> attributeFrequencyTable = attributeColumn.getFrequencyTable();
-            Column labelColumn = dataset.getColumn("member_card");
-            HashMap<String, Integer> labelFrequencyTable = labelColumn.getFrequencyTable();
-
-            // build a attribute to label hash map
-            HashMap<String, HashMap<String, Integer>> attributeToLabel = new HashMap<>();
-            for(String key: attributeFrequencyTable.keySet()) {
-                // build a label hashmap first
-                HashMap<String, Integer> labelHashMap = new HashMap<>();
-                for(String label: labelFrequencyTable.keySet()) {
-                    labelHashMap.put(label, 0);
+            if(dataset.getColumn(attribute).type.equals("String")) {
+                String splitAttribute = "String " + attribute;
+                ArrayList<Dataset> splittedDatasetList = split_dataset_by_attribute(dataset, splitAttribute);
+                double entropy = 0.0;
+                for(Dataset splitdataset: splittedDatasetList) {
+                    entropy += (double)splitdataset.getRowSize()/(double)dataset.getRowSize() * count_information_gain_of_dataset(splitdataset, target);
                 }
-                attributeToLabel.put(key, labelHashMap);
-            }
+                double localGain = currentInformation - entropy;
+                if(localGain > currentGain) {
+                    currentGain = localGain;
+                    bestAttribute = splitAttribute;
+                    // clone splitted dataset list
+                    subDatasetList.clear();
+                    for(Dataset tempDataset: splittedDatasetList) {
+                        Dataset cloneDataset = new Dataset(tempDataset);
+                        subDatasetList.add(cloneDataset);
+                    }
 
-            // count attribute to label
-            for(int i = 0; i < attributeColumn.getRowSize(); i++) {
-                String localAttribute = attributeColumn.getRowValue(i);
-                String localLabel = labelColumn.getRowValue(i);
-                HashMap<String, Integer> localLabelFrequency = attributeToLabel.get(localAttribute);
-                localLabelFrequency.put(localLabel, localLabelFrequency.get(localLabel)+1);
-                attributeToLabel.put(localAttribute, localLabelFrequency);
-            }
-
-            // count entropy based on attribute A
-            double entropy = 0.0;
-            for(String attributeValue: attributeToLabel.keySet()) {
-                HashMap<String, Integer> localLabelFrequencyTable = attributeToLabel.get(attributeValue);
-                double localInformation = 0.0;
-                double localTotalData = 0.0;
-                for(String item: localLabelFrequencyTable.keySet()) {
-                    localTotalData += localLabelFrequencyTable.get(item);
                 }
-                for(String item: localLabelFrequencyTable.keySet()) {
-                    localInformation -= (localLabelFrequencyTable.get(item)) / (localTotalData) * (Math.log((localLabelFrequencyTable.get(item)) / (localTotalData)) / Math.log(2.0d));
-                }
-                localInformation *= (localTotalData)/(totaldata);
-                entropy += localInformation;
             }
+            else {      // integer type
+                Column attributeColumn = dataset.getColumn(attribute);
+                // get a sorted array list from integer column
+                ArrayList<Integer> sortedAttributeList = new ArrayList<>(attributeColumn.getSetofValue());
+                ArrayList<Double> splitAttributeItemList = new ArrayList<>();
+                for(int i = 0; i < sortedAttributeList.size() - 1; i++) {
+                    double current = sortedAttributeList.get(i);
+                    double next = sortedAttributeList.get(i+1);
+                    double average = (current + next) / 2;
+                    splitAttributeItemList.add(average);
+                }
 
-            // count information gain
-            double localGain = currentInformation - entropy;
-            if(localGain > gain) {
-                gain = localGain;
-                bestAttribute = attribute;
+                double attributeGain = 0.0;
+                String localAttribute = "";
+                ArrayList<Dataset> localSubDataList = null;
+                // split by every item in split attribute item list
+                for(double attributeItem: splitAttributeItemList) {
+                    String splitAttribute = "Integer " + attribute + " " + attributeItem;
+                    ArrayList<Dataset> splittedDatasetList = split_dataset_by_attribute(dataset, splitAttribute);
+                    double entropy = 0.0;
+                    for(Dataset splitdataset: splittedDatasetList) {
+                        entropy += (double)splitdataset.getRowSize()/(double)dataset.getRowSize() * count_information_gain_of_dataset(splitdataset, target);
+                    }
+                    double localGain = currentInformation - entropy;
+                    if(localGain > attributeGain) {
+                        attributeGain = localGain;
+                        localAttribute = splitAttribute;
+                        localSubDataList = splittedDatasetList;
+                    }
+
+                }
+                if(attributeGain > currentGain) {
+                    currentGain = attributeGain;
+                    bestAttribute = localAttribute;
+                    // clone splitted dataset list
+                    subDatasetList.clear();
+                    for(Dataset tempDataset: localSubDataList) {
+                        Dataset cloneDataset = new Dataset(tempDataset);
+                        subDatasetList.add(cloneDataset);
+                    }
+                }
             }
 
         }
+
         return bestAttribute;
+    }
+
+    ArrayList<Dataset> split_dataset_by_attribute(Dataset dataset, String best_attribute) {
+        ArrayList<Dataset> datasetList = new ArrayList<>();
+        String[] token = best_attribute.split(" ");
+        if(token[0].equals("String")) {
+            String attribute = token[1];
+            Column attributeColumn = dataset.getColumn(attribute);
+            TreeSet<String> attributeSet = attributeColumn.getSetofValue();
+            for(String attributeItem: attributeSet) {
+                // clone a dataset with columns only
+                Dataset cloneDataset = dataset.cloneDatasetWithColumns();
+                for(int i = 0; i < dataset.getRowSize(); i++) {
+                    if(attributeColumn.getRowValue(i).equals(attributeItem)) {
+                        // add city
+                        cloneDataset.getColumn("city").addValue(dataset.getColumn("city").getRowValue(i));
+
+                        // add state_province
+                        cloneDataset.getColumn("state_province").addValue(dataset.getColumn("state_province").getRowValue(i));
+
+                        // add country
+                        cloneDataset.getColumn("country").addValue(dataset.getColumn("country").getRowValue(i));
+
+                        // add marital_status
+                        cloneDataset.getColumn("marital_status").addValue(dataset.getColumn("marital_status").getRowValue(i));
+
+                        // add gender
+                        cloneDataset.getColumn("gender").addValue(dataset.getColumn("gender").getRowValue(i));
+
+                        // add total_children
+                        cloneDataset.getColumn("total_children").addValue(dataset.getColumn("total_children").getRowValue(i));
+
+                        // add num_children_at_home
+                        cloneDataset.getColumn("num_children_at_home").addValue(dataset.getColumn("num_children_at_home").getRowValue(i));
+
+                        // add education
+                        cloneDataset.getColumn("education").addValue(dataset.getColumn("education").getRowValue(i));
+
+                        // add member_card
+                        cloneDataset.getColumn("member_card").addValue(dataset.getColumn("member_card").getRowValue(i));
+
+                        // add age
+                        cloneDataset.getColumn("age").addValue(dataset.getColumn("age").getRowValue(i));
+
+                        // add year_income
+                        cloneDataset.getColumn("year_income").addValue(dataset.getColumn("year_income").getRowValue(i));
+                    }
+                }
+                datasetList.add(cloneDataset);
+            }
+        }
+        else {
+            String attribute = token[1];
+            double threshold = Double.parseDouble(token[2]);
+            Column attributeColumn = dataset.getColumn(attribute);
+
+            // clone two datasets with columns only
+            Dataset lesserDataset = dataset.cloneDatasetWithColumns();
+            Dataset largerDataset = dataset.cloneDatasetWithColumns();
+
+            for(int i = 0; i < dataset.getRowSize(); i++) {
+                if(Double.parseDouble(attributeColumn.getRowValue(i)) <= threshold) {
+                    // add city
+                    lesserDataset.getColumn("city").addValue(dataset.getColumn("city").getRowValue(i));
+
+                    // add state_province
+                    lesserDataset.getColumn("state_province").addValue(dataset.getColumn("state_province").getRowValue(i));
+
+                    // add country
+                    lesserDataset.getColumn("country").addValue(dataset.getColumn("country").getRowValue(i));
+
+                    // add marital_status
+                    lesserDataset.getColumn("marital_status").addValue(dataset.getColumn("marital_status").getRowValue(i));
+
+                    // add gender
+                    lesserDataset.getColumn("gender").addValue(dataset.getColumn("gender").getRowValue(i));
+
+                    // add total_children
+                    lesserDataset.getColumn("total_children").addValue(dataset.getColumn("total_children").getRowValue(i));
+
+                    // add num_children_at_home
+                    lesserDataset.getColumn("num_children_at_home").addValue(dataset.getColumn("num_children_at_home").getRowValue(i));
+
+                    // add education
+                    lesserDataset.getColumn("education").addValue(dataset.getColumn("education").getRowValue(i));
+
+                    // add member_card
+                    lesserDataset.getColumn("member_card").addValue(dataset.getColumn("member_card").getRowValue(i));
+
+                    // add age
+                    lesserDataset.getColumn("age").addValue(dataset.getColumn("age").getRowValue(i));
+
+                    // add year_income
+                    lesserDataset.getColumn("year_income").addValue(dataset.getColumn("year_income").getRowValue(i));
+                }
+                else {
+                    // add city
+                    largerDataset.getColumn("city").addValue(dataset.getColumn("city").getRowValue(i));
+
+                    // add state_province
+                    largerDataset.getColumn("state_province").addValue(dataset.getColumn("state_province").getRowValue(i));
+
+                    // add country
+                    largerDataset.getColumn("country").addValue(dataset.getColumn("country").getRowValue(i));
+
+                    // add marital_status
+                    largerDataset.getColumn("marital_status").addValue(dataset.getColumn("marital_status").getRowValue(i));
+
+                    // add gender
+                    largerDataset.getColumn("gender").addValue(dataset.getColumn("gender").getRowValue(i));
+
+                    // add total_children
+                    largerDataset.getColumn("total_children").addValue(dataset.getColumn("total_children").getRowValue(i));
+
+                    // add num_children_at_home
+                    largerDataset.getColumn("num_children_at_home").addValue(dataset.getColumn("num_children_at_home").getRowValue(i));
+
+                    // add education
+                    largerDataset.getColumn("education").addValue(dataset.getColumn("education").getRowValue(i));
+
+                    // add member_card
+                    largerDataset.getColumn("member_card").addValue(dataset.getColumn("member_card").getRowValue(i));
+
+                    // add age
+                    largerDataset.getColumn("age").addValue(dataset.getColumn("age").getRowValue(i));
+
+                    // add year_income
+                    largerDataset.getColumn("year_income").addValue(dataset.getColumn("year_income").getRowValue(i));
+                }
+            }
+            datasetList.add(lesserDataset);
+            datasetList.add(largerDataset);
+        }
+
+        return datasetList;
+    }
+
+    private double count_information_gain_of_dataset(Dataset dataset, String target) {
+        double informationGain = 0.0d;
+
+        // I(p,n) = -(p/(p+n)) lg(p/p+n) - (n/(p+n)) lg(n/(p+n))
+
+        // get the size of dataset
+        double totalDataSize = dataset.getRowSize();
+
+        // get the target column
+        Column targetColumn = dataset.getColumn(target);
+
+        // get the target's frequency table
+        HashMap<String, Integer> targetFrequencyTable = targetColumn.getFrequencyTable();
+
+        // count the Information
+        for(String item: targetFrequencyTable.keySet()) {
+            double singleItem = targetFrequencyTable.get(item);
+            double firstPart = singleItem/totalDataSize;                // the p/(p+n) part
+            double secondPart = Math.log(firstPart)/ Math.log(2.0d);    // the lg(p/(p+n)) part
+            informationGain -= firstPart * secondPart;
+        }
+
+        return informationGain;
+
     }
 }

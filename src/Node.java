@@ -5,8 +5,8 @@ import java.util.ArrayList;
  */
 public class Node {
     ArrayList<Node> child;          // the path
-    String attribute;               // the name of splitting attribute, if child = 0
-                                    // it record the name of class
+    String attribute;               // the name of splitting attribute
+    String pathName;                // if child = 0 it record the name of class
 
     public Node() {
         this("");
