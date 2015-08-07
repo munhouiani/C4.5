@@ -484,6 +484,104 @@ public class DecisionTree {
         return bestAttribute;
     }
 
+    private String measure_with_gini_index(Dataset dataset, ArrayList<String> attributeList, ArrayList<Dataset> subDatasetList) {
+        String target= "member_card";
+        String bestAttribute = "";
+
+        // count the gini of the original data
+        double currentGini = count_gini_of_column(dataset.getColumn(target));
+
+        // split data by every attribute in attribute list and count gini
+
+        for(String attribute: attributeList) {
+            if(dataset.getColumn(attribute).type.equals("String")) {
+                String splitAttribute = "String " + attribute;
+                ArrayList<Dataset> splittedDatasetList = split_dataset_by_attribute(dataset, splitAttribute);
+                double attributeGini = 0.0;
+                for(Dataset splitdataset: splittedDatasetList) {
+                    double splitGini = count_gini_of_column(splitdataset.getColumn(target));
+                    attributeGini = splitGini * splitdataset.getRowSize()/dataset.getRowSize();
+                }
+
+                if(attributeGini <= currentGini) {
+                    currentGini = attributeGini;
+                    bestAttribute = splitAttribute;
+                    // clone splitted dataset list
+                    subDatasetList.clear();
+                    for(Dataset tempDataset: splittedDatasetList) {
+                        Dataset cloneDataset = new Dataset(tempDataset);
+                        subDatasetList.add(cloneDataset);
+                    }
+
+                }
+            }
+            else {      // integer type
+                Column attributeColumn = dataset.getColumn(attribute);
+                // get a sorted array list from integer column
+                ArrayList<Integer> sortedAttributeList = new ArrayList<>(attributeColumn.getSetofValue());
+                ArrayList<Double> splitAttributeItemList = new ArrayList<>();
+                if(sortedAttributeList.size() == 1) {
+                    double item = sortedAttributeList.get(0);
+                    splitAttributeItemList.add(item);
+                }
+                else {
+                    for(int i = 0; i < sortedAttributeList.size() - 1; i++) {
+                        double current = sortedAttributeList.get(i);
+                        double next = sortedAttributeList.get(i+1);
+                        double average = (current + next) / 2;
+                        splitAttributeItemList.add(average);
+                    }
+                }
+
+                double attributeGini = Double.MAX_VALUE;
+                String localAttribute = "";
+                ArrayList<Dataset> localSubDataList = null;
+                // split by every item in split attribute item list
+                for(double attributeItem: splitAttributeItemList) {
+                    String splitAttribute = "Integer " + attribute + " " + attributeItem;
+                    ArrayList<Dataset> splittedDatasetList = split_dataset_by_attribute(dataset, splitAttribute);
+                    double localGini = 0.0;
+                    for(Dataset splitdataset: splittedDatasetList) {
+                        double splitGini = count_gini_of_column(splitdataset.getColumn(target));
+                        localGini = splitGini * splitdataset.getRowSize()/dataset.getRowSize();
+                    }
+
+                    if(localGini <= attributeGini) {
+                        attributeGini = localGini;
+                        localAttribute = splitAttribute;
+                        localSubDataList = splittedDatasetList;
+                    }
+
+                }
+                if(attributeGini <= currentGini) {
+                    currentGini = attributeGini;
+                    bestAttribute = localAttribute;
+                    // clone splitted dataset list
+                    subDatasetList.clear();
+                    for(Dataset tempDataset: localSubDataList) {
+                        Dataset cloneDataset = new Dataset(tempDataset);
+                        subDatasetList.add(cloneDataset);
+                    }
+                }
+            }
+
+        }
+
+        return bestAttribute;
+    }
+
+    private double count_gini_of_column(Column column) {
+        TreeSet<String> setofValue = column.getSetofValue();
+        double totalDatasize = column.getRowSize();
+        double p = 0.0;
+        for(String item: setofValue) {
+            double classValue = column.getValueCount(item);
+            p += (classValue/totalDatasize) * (classValue/totalDatasize);
+        }
+        double gini = 1 - p;
+        return gini;
+    }
+
     ArrayList<Dataset> split_dataset_by_attribute(Dataset dataset, String best_attribute) {
         ArrayList<Dataset> datasetList = new ArrayList<>();
         String[] token = best_attribute.split(" ");
