@@ -442,7 +442,7 @@ public class DecisionTree {
                     entropy += (double)splitdataset.getRowSize()/(double)dataset.getRowSize() * count_information_gain_of_dataset(splitdataset, target);
                 }
                 double localGain = currentInformation - entropy;
-                if(localGain >= currentGain) {
+                if(localGain > currentGain) {
                     currentGain = localGain;
                     bestAttribute = splitAttribute;
                     // clone splitted dataset list
@@ -459,18 +459,15 @@ public class DecisionTree {
                 // get a sorted array list from integer column
                 ArrayList<String> sortedAttributeList = new ArrayList<>(attributeColumn.getSetofValue());
                 ArrayList<Double> splitAttributeItemList = new ArrayList<>();
-                if(sortedAttributeList.size() == 1) {
-                    double item = Double.parseDouble(sortedAttributeList.get(0));
-                    splitAttributeItemList.add(item);
+
+
+                for(int i = 0; i < sortedAttributeList.size() - 1; i++) {
+                    double current = Double.parseDouble(sortedAttributeList.get(i));
+                    double next = Double.parseDouble(sortedAttributeList.get(i + 1));
+                    double average = (current + next) / 2;
+                    splitAttributeItemList.add(average);
                 }
-                else {
-                    for(int i = 0; i < sortedAttributeList.size() - 1; i++) {
-                        double current = Double.parseDouble(sortedAttributeList.get(i));
-                        double next = Double.parseDouble(sortedAttributeList.get(i + 1));
-                        double average = (current + next) / 2;
-                        splitAttributeItemList.add(average);
-                    }
-                }
+
 
                 double attributeGain = 0.0;
                 String localAttribute = "";
@@ -484,14 +481,14 @@ public class DecisionTree {
                         entropy += (double)splitdataset.getRowSize()/(double)dataset.getRowSize() * count_information_gain_of_dataset(splitdataset, target);
                     }
                     double localGain = currentInformation - entropy;
-                    if(localGain >= attributeGain) {
+                    if(localGain > attributeGain) {
                         attributeGain = localGain;
                         localAttribute = splitAttribute;
                         localSubDataList = splittedDatasetList;
                     }
 
                 }
-                if(attributeGain >= currentGain) {
+                if(attributeGain > currentGain) {
                     currentGain = attributeGain;
                     bestAttribute = localAttribute;
                     // clone splitted dataset list
@@ -526,7 +523,7 @@ public class DecisionTree {
                     attributeGini = splitGini * splitdataset.getRowSize()/dataset.getRowSize();
                 }
 
-                if(attributeGini <= currentGini) {
+                if(attributeGini < currentGini) {
                     currentGini = attributeGini;
                     bestAttribute = splitAttribute;
                     // clone splitted dataset list
@@ -543,17 +540,12 @@ public class DecisionTree {
                 // get a sorted array list from integer column
                 ArrayList<String> sortedAttributeList = new ArrayList<>(attributeColumn.getSetofValue());
                 ArrayList<Double> splitAttributeItemList = new ArrayList<>();
-                if(sortedAttributeList.size() == 1) {
-                    double item = Double.parseDouble(sortedAttributeList.get(0));
-                    splitAttributeItemList.add(item);
-                }
-                else {
-                    for(int i = 0; i < sortedAttributeList.size() - 1; i++) {
-                        double current = Double.parseDouble(sortedAttributeList.get(i));
-                        double next = Double.parseDouble(sortedAttributeList.get(i+1));
-                        double average = (current + next) / 2;
-                        splitAttributeItemList.add(average);
-                    }
+
+                for(int i = 0; i < sortedAttributeList.size() - 1; i++) {
+                    double current = Double.parseDouble(sortedAttributeList.get(i));
+                    double next = Double.parseDouble(sortedAttributeList.get(i+1));
+                    double average = (current + next) / 2;
+                    splitAttributeItemList.add(average);
                 }
 
                 double attributeGini = Double.MAX_VALUE;
@@ -569,14 +561,14 @@ public class DecisionTree {
                         localGini = splitGini * splitdataset.getRowSize()/dataset.getRowSize();
                     }
 
-                    if(localGini <= attributeGini) {
+                    if(localGini < attributeGini) {
                         attributeGini = localGini;
                         localAttribute = splitAttribute;
                         localSubDataList = splittedDatasetList;
                     }
 
                 }
-                if(attributeGini <= currentGini) {
+                if(attributeGini < currentGini) {
                     currentGini = attributeGini;
                     bestAttribute = localAttribute;
                     // clone splitted dataset list
