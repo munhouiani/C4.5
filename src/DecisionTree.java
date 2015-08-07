@@ -9,13 +9,18 @@ import java.util.*;
  * Created by mhwong on 8/5/15.
  */
 public class DecisionTree {
+    boolean printPredictAndActual = false;
+
     String filePath;
     Dataset dataset;
     Dataset testset;
+    String target;
     ArrayList<String> attributeList;
 
-    public DecisionTree(String filePath) {
+    public DecisionTree(String filePath, String target) {
         this.filePath = filePath;
+
+        this.target = target;
 
         // create dataset
         attributeList = new ArrayList<>();
@@ -29,15 +34,15 @@ public class DecisionTree {
         dataset = null;
 
         // generate decision tree
-        Node decisionTree = generate_decision_tree(trainset, attributeList);
+        Node decisionTree = generate_decision_tree(trainset, attributeList, target);
 
         // validate decision tree accuracy
-        validate_decision_tree(testset, decisionTree, "member_card");
+        validate_decision_tree(testset, decisionTree, target);
 
     }
 
     public DecisionTree() {
-        this("/home/mhwong/Desktop/c4.5_dataset/CUSTOMER.TXT");
+        this("dataset/CUSTOMER.TXT", "member_card");
     }
 
     private void create_dataset_from_file() {
@@ -96,7 +101,9 @@ public class DecisionTree {
             column = new Column(attribute);
             testset.addColumn(column);
 
-            attributeList.add(attribute);
+            if(!attribute.equals(target)){
+                attributeList.add(attribute);
+            }
 
             // splitItem[9]: customer_region_id
 
@@ -111,7 +118,9 @@ public class DecisionTree {
             column = new Column(attribute);
             testset.addColumn(column);
 
-            attributeList.add(attribute);
+            if(!attribute.equals(target)){
+                attributeList.add(attribute);
+            }
 
 
             // splitItem[12]: gender
@@ -122,7 +131,9 @@ public class DecisionTree {
             column = new Column(attribute);
             testset.addColumn(column);
 
-            attributeList.add(attribute);
+            if(!attribute.equals(target)){
+                attributeList.add(attribute);
+            }
 
 
             // splitItem[13]: total_children
@@ -135,7 +146,9 @@ public class DecisionTree {
             column.type = "Integer";
             testset.addColumn(column);
 
-            attributeList.add(attribute);
+            if(!attribute.equals(target)){
+                attributeList.add(attribute);
+            }
 
 
             // splitItem[14]: num_children_at_home
@@ -148,7 +161,9 @@ public class DecisionTree {
             column.type = "Integer";
             testset.addColumn(column);
 
-            attributeList.add(attribute);
+            if(!attribute.equals(target)){
+                attributeList.add(attribute);
+            }
 
 
             // splitItem[15]: education
@@ -159,7 +174,9 @@ public class DecisionTree {
             column = new Column(attribute);
             testset.addColumn(column);
 
-            attributeList.add(attribute);
+            if(!attribute.equals(target)){
+                attributeList.add(attribute);
+            }
 
 
             // splitItem[16]: member_card, our targer, not included in attribute_list
@@ -169,6 +186,10 @@ public class DecisionTree {
 
             column = new Column(attribute);
             testset.addColumn(column);
+
+            if(!attribute.equals(target)){
+                attributeList.add(attribute);
+            }
 
 
 
@@ -182,7 +203,9 @@ public class DecisionTree {
             column.type = "Integer";
             testset.addColumn(column);
 
-            attributeList.add(attribute);
+            if(!attribute.equals(target)){
+                attributeList.add(attribute);
+            }
 
 
             // splitItem[18]: year_income
@@ -195,7 +218,9 @@ public class DecisionTree {
             column.type = "Integer";
             testset.addColumn(column);
 
-            attributeList.add(attribute);
+            if(!attribute.equals(target)){
+                attributeList.add(attribute);
+            }
 
             while((splitItem = csvReader.readNext()) != null) {
 
@@ -240,7 +265,7 @@ public class DecisionTree {
     private void build_testset() {
         // calculate the ratio of label (member_card)
         HashMap<String, Integer> frequency = new HashMap<>();
-        Column column = dataset.getColumn("member_card");
+        Column column = dataset.getColumn(target);
         for(int i = 0; i < column.getRowSize(); i++) {
             String item = column.getRowValue(i);
             if(frequency.containsKey(item)) {
@@ -263,7 +288,7 @@ public class DecisionTree {
         Random random = new Random(System.currentTimeMillis());
         while(!is_all_key_empty(frequency)) {
             int randomNumber = random.nextInt(randomNumberRange);
-            String label = dataset.getColumn("member_card").getRowValue(randomNumber);
+            String label = dataset.getColumn(target).getRowValue(randomNumber);
             if(frequency.get(label) != 0) {
                 frequency.put(label, frequency.get(label) - 1);
                 // add city
@@ -337,11 +362,11 @@ public class DecisionTree {
         return result;
     }
 
-    private Node generate_decision_tree(Dataset dataset, ArrayList<String> attributeList) {
+    private Node generate_decision_tree(Dataset dataset, ArrayList<String> attributeList, String target) {
         // create a node N
         Node node = new Node();
 
-        HashMap<String, Integer> frequency = dataset.getColumn("member_card").getFrequencyTable();
+        HashMap<String, Integer> frequency = dataset.getColumn(target).getFrequencyTable();
 
         // if tuple in D is same class, return N as a leaf node with the class C
         if(frequency.keySet().size() == 1) {
@@ -365,7 +390,7 @@ public class DecisionTree {
 
         // apply attribute selection method
         ArrayList<Dataset> subDatasetList = new ArrayList<>();
-        String best_attribute = measure_with_information_gain(dataset, attributeList, subDatasetList);
+        String best_attribute = measure_with_information_gain(dataset, attributeList, subDatasetList, target);
         String[] token = best_attribute.split(" ");
         if(!best_attribute.isEmpty()) {
             attributeList.remove(token[1]);
@@ -373,7 +398,7 @@ public class DecisionTree {
                 node.attribute = "Integer " + token[1];
 
                 for(Dataset subDataset: subDatasetList) {
-                    Node child = generate_decision_tree(subDataset, attributeList);
+                    Node child = generate_decision_tree(subDataset, attributeList, target);
                     if(Double.parseDouble(subDataset.getColumn(token[1]).getRowValue(0)) <= Double.parseDouble(token[2])) {
                         child.pathName = "<= " + token[2];
                     }
@@ -387,7 +412,7 @@ public class DecisionTree {
                 node.attribute = "String " + token[1];
                 for(Dataset subDataset: subDatasetList) {
 
-                    Node child = generate_decision_tree(subDataset, attributeList);
+                    Node child = generate_decision_tree(subDataset, attributeList, target);
                     child.pathName = subDataset.getColumn(token[1]).getRowValue(0);
                     node.child.add(child);
                 }
@@ -399,9 +424,8 @@ public class DecisionTree {
 
     }
 
-    private String measure_with_information_gain(Dataset dataset, ArrayList<String> attributeList, ArrayList<Dataset> subDatasetList) {
+    private String measure_with_information_gain(Dataset dataset, ArrayList<String> attributeList, ArrayList<Dataset> subDatasetList, String target) {
 
-        String target= "member_card";
         String bestAttribute = "";
         double currentGain = 0.0;
         // count the information gain of original data
@@ -433,16 +457,16 @@ public class DecisionTree {
             else {      // integer type
                 Column attributeColumn = dataset.getColumn(attribute);
                 // get a sorted array list from integer column
-                ArrayList<Integer> sortedAttributeList = new ArrayList<>(attributeColumn.getSetofValue());
+                ArrayList<String> sortedAttributeList = new ArrayList<>(attributeColumn.getSetofValue());
                 ArrayList<Double> splitAttributeItemList = new ArrayList<>();
                 if(sortedAttributeList.size() == 1) {
-                    double item = sortedAttributeList.get(0);
+                    double item = Double.parseDouble(sortedAttributeList.get(0));
                     splitAttributeItemList.add(item);
                 }
                 else {
                     for(int i = 0; i < sortedAttributeList.size() - 1; i++) {
-                        double current = sortedAttributeList.get(i);
-                        double next = sortedAttributeList.get(i+1);
+                        double current = Double.parseDouble(sortedAttributeList.get(i));
+                        double next = Double.parseDouble(sortedAttributeList.get(i + 1));
                         double average = (current + next) / 2;
                         splitAttributeItemList.add(average);
                     }
@@ -484,8 +508,7 @@ public class DecisionTree {
         return bestAttribute;
     }
 
-    private String measure_with_gini_index(Dataset dataset, ArrayList<String> attributeList, ArrayList<Dataset> subDatasetList) {
-        String target= "member_card";
+    private String measure_with_gini_index(Dataset dataset, ArrayList<String> attributeList, ArrayList<Dataset> subDatasetList, String target) {
         String bestAttribute = "";
 
         // count the gini of the original data
@@ -518,16 +541,16 @@ public class DecisionTree {
             else {      // integer type
                 Column attributeColumn = dataset.getColumn(attribute);
                 // get a sorted array list from integer column
-                ArrayList<Integer> sortedAttributeList = new ArrayList<>(attributeColumn.getSetofValue());
+                ArrayList<String> sortedAttributeList = new ArrayList<>(attributeColumn.getSetofValue());
                 ArrayList<Double> splitAttributeItemList = new ArrayList<>();
                 if(sortedAttributeList.size() == 1) {
-                    double item = sortedAttributeList.get(0);
+                    double item = Double.parseDouble(sortedAttributeList.get(0));
                     splitAttributeItemList.add(item);
                 }
                 else {
                     for(int i = 0; i < sortedAttributeList.size() - 1; i++) {
-                        double current = sortedAttributeList.get(i);
-                        double next = sortedAttributeList.get(i+1);
+                        double current = Double.parseDouble(sortedAttributeList.get(i));
+                        double next = Double.parseDouble(sortedAttributeList.get(i+1));
                         double average = (current + next) / 2;
                         splitAttributeItemList.add(average);
                     }
@@ -573,7 +596,7 @@ public class DecisionTree {
     private double count_gini_of_column(Column column) {
         TreeSet<String> setofValue = column.getSetofValue();
         double totalDatasize = column.getRowSize();
-        double p = 0.0;
+        double p = 0.0d;
         for(String item: setofValue) {
             double classValue = column.getValueCount(item);
             p += (classValue/totalDatasize) * (classValue/totalDatasize);
@@ -744,21 +767,20 @@ public class DecisionTree {
     }
 
     private void validate_decision_tree(Dataset testset, Node decisionTree, String target) {
-        double accuracy = 0.0;
-        double correct = 0.0;
-        double incorrect = 0.0;
+        double accuracy = 0.0d;
+        double correct = 0.0d;
+        double incorrect = 0.0d;
 
-        double bac = 0.0;
+        double bac = 0.0d;
 
-        double normalCorrect = 0.0;
-        double bronzeCorrect = 0.0;
-        double silverCorrect = 0.0;
-        double glodenCorrect = 0.0;
-
-        double normalTotal = 0.0;
-        double bronzeTotal = 0.0;
-        double silverTotal = 0.0;
-        double glodenTotal = 0.0;
+        Column targetColumn = testset.getColumn(target);
+        TreeSet<String> setofValue = targetColumn.getSetofValue();
+        HashMap<String, Double> correctMap = new HashMap<>();
+        HashMap<String, Double> totalMap = new HashMap<>();
+        for(String item: setofValue) {
+            correctMap.put(item, 0.0);
+            totalMap.put(item, 0.0);
+        }
 
         for(int i = 0; i < testset.getRowSize(); i++) {
             Node pointer = decisionTree;
@@ -794,50 +816,26 @@ public class DecisionTree {
 
             }
             String label = pointer.attribute;
-            //System.out.printf("%d %s\t%s\n", i, label, testset.getColumn(target).getRowValue(i));
+            if(printPredictAndActual){
+                System.out.printf("%d %s\t%s\n", i, label, testset.getColumn(target).getRowValue(i));
+            }
             if(label.equals(testset.getColumn(target).getRowValue(i))) {
                 correct++;
-                switch (label) {
-                    case "Bronze":
-                        bronzeCorrect++;
-                        bronzeTotal++;
-                        break;
-                    case "Silver":
-                        silverCorrect++;
-                        silverTotal++;
-                        break;
-                    case "Normal":
-                        normalCorrect++;
-                        normalTotal++;
-                        break;
-                    case "Gloden":
-                        glodenCorrect++;
-                        glodenTotal++;
-                        break;
-                }
+                correctMap.put(label, correctMap.get(label) + 1.0d);
+                totalMap.put(label, totalMap.get(label) + 1.0d);
             }
             else {
                 incorrect++;
-                switch (testset.getColumn(target).getRowValue(i)) {
-                    case "Bronze":
-                        bronzeTotal++;
-                        break;
-                    case "Silver":
-                        silverTotal++;
-                        break;
-                    case "Normal":
-                        normalTotal++;
-                        break;
-                    case "Gloden":
-                        glodenTotal++;
-                        break;
-                }
+                totalMap.put(testset.getColumn(target).getRowValue(i), totalMap.get(testset.getColumn(target).getRowValue(i)) + 1);
             }
         }
 
         accuracy = correct / (correct + incorrect) * 100;
+        for(String key: correctMap.keySet()) {
+            bac += (correctMap.get(key) / totalMap.get(key));
+        }
 
-        bac = (normalCorrect/normalTotal + bronzeCorrect/bronzeTotal + silverCorrect/silverTotal + glodenCorrect/glodenTotal) / 3 * 100;
+        bac = bac / correctMap.size() * 100;
         System.out.printf("Accuracy: %f\nBAC: %f\n", accuracy, bac);
 
     }

@@ -61,20 +61,15 @@ public class Column {
         return frequencyTable;
     }
 
-    public TreeSet getSetofValue() {
-        TreeSet set;
-        if(this.type.equals("String")) {
-            set = new TreeSet<String>();
-            for(String item: row) {
-                set.add(item);
-            }
+    public TreeSet<String> getSetofValue() {
+        TreeSet<String> set;
+
+        set = new TreeSet<String>();
+        for(String item: row) {
+            set.add(item);
         }
-        else {
-            set = new TreeSet<Integer>();
-            for(String item: row) {
-                set.add(Integer.parseInt(item));
-            }
-        }
+
+
         return set;
     }
 
