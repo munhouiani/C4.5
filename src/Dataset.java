@@ -57,4 +57,10 @@ public class Dataset {
         return dataset;
     }
 
+    public void clearAllRowsValue() {
+        for(Column column: this.columns) {
+            column.row.clear();
+        }
+    }
+
 }
