@@ -10,9 +10,11 @@ import java.util.*;
  */
 public class DecisionTree {
     boolean printPredictAndActual = false;
+    String measurement;
 
+    public DecisionTree(String filePath, String target, String measurement) {
 
-    public DecisionTree(String filePath, String target) {
+        this.measurement = measurement;
 
         // create dataset
         ArrayList<String> attributeList = new ArrayList<>();
@@ -37,7 +39,7 @@ public class DecisionTree {
     }
 
     public DecisionTree() {
-        this("dataset/CUSTOMER.TXT", "member_card");
+        this("dataset/CUSTOMER.TXT", "member_card", "ig");
     }
 
     private void create_dataset_from_file(Dataset dataset, String target, String filePath, ArrayList<String> attributeList) {
@@ -389,7 +391,13 @@ public class DecisionTree {
 
         // apply attribute selection method
         ArrayList<Dataset> subDatasetList = new ArrayList<>();
-        String best_attribute = measure_with_information_gain(dataset, attributeList, subDatasetList, target);
+        String best_attribute;
+        if(measurement.equals("ig")){
+            best_attribute = measure_with_information_gain(dataset, attributeList, subDatasetList, target);
+        }
+        else {
+            best_attribute = measure_with_gini_index(dataset, attributeList, subDatasetList, target);
+        }
         String[] token = best_attribute.split(" ");
         if(!best_attribute.isEmpty()) {
             attributeList.remove(token[1]);
