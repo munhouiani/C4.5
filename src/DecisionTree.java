@@ -400,7 +400,7 @@ public class DecisionTree {
         }
         String[] token = best_attribute.split(" ");
         if(!best_attribute.isEmpty()) {
-            attributeList.remove(token[1]);
+
             if(token[0].equals("Integer")) {
                 node.attribute = "Integer " + token[1];
 
@@ -416,6 +416,7 @@ public class DecisionTree {
                 }
             }
             else {
+                attributeList.remove(token[1]);
                 node.attribute = "String " + token[1];
                 for(Dataset subDataset: subDatasetList) {
 
