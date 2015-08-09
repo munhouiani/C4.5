@@ -9,12 +9,19 @@ import java.util.*;
  * Created by mhwong on 8/5/15.
  */
 public class DecisionTree {
-    boolean printPredictAndActual = false;
+    boolean outputPredictAndActual = false;
+    String outputPath;
     String measurement;
 
-    public DecisionTree(String filePath, String target, String measurement) {
+    public DecisionTree(String filePath, String target, String measurement, String outputPath) {
 
         this.measurement = measurement;
+
+        this.outputPath = outputPath;
+
+        if(!outputPath.isEmpty()) {
+            outputPredictAndActual = true;
+        }
 
         // create dataset
         ArrayList<String> attributeList = new ArrayList<>();
@@ -38,8 +45,12 @@ public class DecisionTree {
 
     }
 
+    public DecisionTree(String filePath, String target, String measurement) {
+        this(filePath, target, measurement, "");
+    }
+
     public DecisionTree() {
-        this("dataset/CUSTOMER.TXT", "member_card", "ig");
+        this("dataset/CUSTOMER.TXT", "member_card", "ig", "");
     }
 
     private void create_dataset_from_file(Dataset dataset, String target, String filePath, ArrayList<String> attributeList) {
@@ -427,7 +438,17 @@ public class DecisionTree {
             }
         }
 
-
+        if(node.attribute.isEmpty()) {
+            String label = "";
+            int currentCount = 0;
+            for(String key: frequency.keySet()) {
+                if(frequency.get(key) > currentCount) {
+                    label = key;
+                    currentCount = frequency.get(key);
+                }
+            }
+            node.attribute = label;
+        }
         return node;
 
     }
@@ -773,6 +794,15 @@ public class DecisionTree {
 
         double bac = 0.0d;
 
+        PrintWriter printWriter = null;
+        if(outputPredictAndActual) {
+            try {
+                printWriter = new PrintWriter(outputPath);
+                printWriter.println("id\tpredict\tactual");
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
         Column targetColumn = testset.getColumn(target);
         TreeSet<String> setofValue = targetColumn.getSetofValue();
         HashMap<String, Double> correctMap = new HashMap<>();
@@ -816,8 +846,9 @@ public class DecisionTree {
 
             }
             String label = pointer.attribute;
-            if(printPredictAndActual){
-                System.out.printf("%d %s\t%s\n", i, label, testset.getColumn(target).getRowValue(i));
+            if(outputPredictAndActual){
+                printWriter.printf("%d\t%s\t%s\n", i+1, label, testset.getColumn(target).getRowValue(i));
+                printWriter.flush();
             }
             if(label.equals(testset.getColumn(target).getRowValue(i))) {
                 correct++;
