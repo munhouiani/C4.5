@@ -30,9 +30,9 @@ public class DecisionTree {
 
         // split dataset to testset and train set
         // clone columns from dataset
-        Dataset trainset = dataset.cloneDatasetWithColumns();
+
         Dataset testset = dataset.cloneDatasetWithColumns();
-        build_testset(trainset, testset, dataset, attributeList, target);
+        Dataset trainset = build_trainset_and_testset(testset, dataset, attributeList, target);
 
         // garbage collect dataset
         dataset = null;
@@ -162,12 +162,12 @@ public class DecisionTree {
             dataset.addColumn(column);
 
 
-            if(!attribute.equals(target)){
-                attributeList.add(attribute);
-            }
+//            if(!attribute.equals(target)){
+//                attributeList.add(attribute);
+//            }
 
 
-            // splitItem[16]: member_card, our targer, not included in attribute_list
+            // splitItem[16]: member_card, our target, not included in attribute_list
             attribute = splitItem[16].replace("\"", "");
             column = new Column(attribute);
             dataset.addColumn(column);
@@ -242,7 +242,7 @@ public class DecisionTree {
         }
     }
 
-    private void build_testset(Dataset trainset, Dataset testset, Dataset dataset, ArrayList<String> attributeList, String target) {
+    private Dataset build_trainset_and_testset(Dataset testset, Dataset dataset, ArrayList<String> attributeList, String target) {
 
         // calculate the ratio of label (member_card)
         HashMap<String, Integer> frequency = new HashMap<>();
@@ -270,7 +270,9 @@ public class DecisionTree {
 
         boolean doneCopy = true;
 
+        Dataset trainset;
         do {
+            trainset = new Dataset(dataset);
             while(!is_all_key_empty(frequency)) {
                 int randomNumber = random.nextInt(randomNumberRange);
                 String label = dataset.getColumn(target).getRowValue(randomNumber);
@@ -279,68 +281,68 @@ public class DecisionTree {
                     // add city
                     column = dataset.getColumn("city");
                     testset.getColumn("city").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("city").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("city").row.remove(randomNumber);
 
 
                     // add state_province
                     column = dataset.getColumn("state_province");
                     testset.getColumn("state_province").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("state_province").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("state_province").row.remove(randomNumber);
 
 
                     // add country
                     column = dataset.getColumn("country");
                     testset.getColumn("country").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("country").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("country").row.remove(randomNumber);
 
 
                     // add marital_status
                     column = dataset.getColumn("marital_status");
                     testset.getColumn("marital_status").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("marital_status").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("marital_status").row.remove(randomNumber);
 
 
                     // add gender
                     column = dataset.getColumn("gender");
                     testset.getColumn("gender").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("gender").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("gender").row.remove(randomNumber);
 
 
                     // add total_children
                     column = dataset.getColumn("total_children");
                     testset.getColumn("total_children").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("total_children").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("total_children").row.remove(randomNumber);
 
 
                     // add num_children_at_home
                     column = dataset.getColumn("num_children_at_home");
                     testset.getColumn("num_children_at_home").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("num_children_at_home").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("num_children_at_home").row.remove(randomNumber);
 
 
                     // add education
                     column = dataset.getColumn("education");
                     testset.getColumn("education").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("education").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("education").row.remove(randomNumber);
 
 
 
                     // add member_card
                     column = dataset.getColumn("member_card");
                     testset.getColumn("member_card").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("member_card").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("member_card").row.remove(randomNumber);
 
 
                     // add age
                     column = dataset.getColumn("age");
                     testset.getColumn("age").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("age").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("age").row.remove(randomNumber);
 
 
                     // add year_income
                     column = dataset.getColumn("year_income");
                     testset.getColumn("year_income").addValue(column.getRowValue(randomNumber));
-                    trainset.getColumn("year_income").addValue(column.getRowValue(randomNumber));
+                    trainset.getColumn("year_income").row.remove(randomNumber);
                 }
             }
 
@@ -355,12 +357,13 @@ public class DecisionTree {
                 }
                 else {
                     doneCopy = false;
-                    trainset.clearAllRowsValue();
                     testset.clearAllRowsValue();
                     break;
                 }
             }
         }while(!doneCopy);
+
+        return trainset;
     }
 
     private boolean is_all_key_empty(HashMap<String, Integer> map) {
