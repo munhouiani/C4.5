@@ -18,7 +18,7 @@ public class Main {
             runtime.gc();
             long memory = runtime.totalMemory() - runtime.freeMemory();
             System.out.println("Used Memory: " + memory + "b");
-            System.out.println("Used Memory: " + memory / (1024L) + "MB");
+            System.out.println("Used Memory: " + memory / (1024L) + "KB");
             System.out.println();
             System.out.println();
         }

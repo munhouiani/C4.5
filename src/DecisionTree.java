@@ -162,9 +162,9 @@ public class DecisionTree {
             dataset.addColumn(column);
 
 
-//            if(!attribute.equals(target)){
-//                attributeList.add(attribute);
-//            }
+            if(!attribute.equals(target)){
+                attributeList.add(attribute);
+            }
 
 
             // splitItem[16]: member_card, our target, not included in attribute_list
@@ -415,6 +415,16 @@ public class DecisionTree {
         String[] token = best_attribute.split(" ");
         if(!best_attribute.isEmpty()) {
 
+            // add majority to current node
+            String label = "";
+            int currentCount = 0;
+            for(String key: frequency.keySet()) {
+                if(frequency.get(key) > currentCount) {
+                    label = key;
+                    currentCount = frequency.get(key);
+                }
+            }
+            node.majority = label;
             if(token[0].equals("Integer")) {
                 node.attribute = "Integer " + token[1];
 
@@ -815,9 +825,12 @@ public class DecisionTree {
             totalMap.put(item, 0.0);
         }
 
-        for(int i = 0; i < testset.getRowSize(); i++) {
+        next: for(int i = 0; i < testset.getRowSize(); i++) {
             Node pointer = decisionTree;
+            boolean found = false;
+            String label;
             while(!pointer.child.isEmpty()) {
+                found = false;
                 String attribute = pointer.attribute;
                 String[] token = attribute.split(" ");
                 if(token[0].equals("Integer")) {
@@ -828,12 +841,17 @@ public class DecisionTree {
                         String[] pathToken = pathName.split(" ");
                         if(pathToken[0].equals("<=") && testValue <= Double.parseDouble(pathToken[1])) {
                             pointer = child;
+                            found = true;
                             break;
                         }
                         else if(pathToken[0].equals(">") && testValue > Double.parseDouble(pathToken[1])) {
                             pointer = child;
+                            found = true;
                             break;
                         }
+                    }
+                    if(!found) {
+                        break;
                     }
                 }
                 else {
@@ -842,13 +860,23 @@ public class DecisionTree {
                     for(Node child: pointer.child) {
                         if(child.pathName.equals(testValue)) {
                             pointer = child;
+                            found = true;
                             break;
                         }
+                    }
+                    if(!found) {
+                        break;
                     }
                 }
 
             }
-            String label = pointer.attribute;
+            if(found) {
+                label = pointer.attribute;
+            }
+            else {
+                label = pointer.majority;
+            }
+
             if(outputPredictAndActual){
                 printWriter.printf("%d\t%s\t%s\n", i+1, label, testset.getColumn(target).getRowValue(i));
                 printWriter.flush();
